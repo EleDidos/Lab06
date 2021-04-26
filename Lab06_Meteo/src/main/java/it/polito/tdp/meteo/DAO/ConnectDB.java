@@ -9,7 +9,7 @@ package it.polito.tdp.meteo.DAO;
 	public class ConnectDB {
 		
 		// check user e password
-		static private final String jdbcUrl = "jdbc:mysql://localhost/dizionario?user=root&password=240899SQL";
+		static private final String jdbcUrl = "jdbc:mysql://localhost/meteo?user=root&password=240899SQL";
 
 		//variabile statica per permettermi di chiamare Hikari solo alla prima connection
 		static private final HikariDataSource ds = null;

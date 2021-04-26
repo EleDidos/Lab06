@@ -42,7 +42,13 @@ public class FXMLController {
 
     @FXML
     void doCalcolaUmidita(ActionEvent event) {
+    	txtResult.setText("");
     	
+    	int mese = boxMese.getValue();
+    	//ottengo le medie di tt le città
+    	StringBuilder sb = model.getUmiditaMedia(mese);
+    	
+    	txtResult.appendText(sb.toString());
     }
 
     @FXML // This method is called by the FXMLLoader when initialization is complete

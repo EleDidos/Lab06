@@ -39,10 +39,43 @@ public class MeteoDAO {
 		}
 	}
 
+	
 	public List<Rilevamento> getAllRilevamentiLocalitaMese(int mese, String localita) {
 
 		return null;
 	}
+	
+	
+	public List<Rilevamento> getUmiditaMediaMese(int mese){
+		List<Rilevamento> umiditaCitta = new ArrayList<Rilevamento>();
+		
+		final String sql = "SELECT Localita, AVG(Umidita) AS u "
+				+ "FROM situazione "
+				+ "WHERE MONTH(Data)=? "
+				+ "GROUP BY Localita ";
+
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, mese);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				//la data non serve --> stampo solo luogo e umidità media
+				Rilevamento r = new Rilevamento(rs.getString("Localita"), null, rs.getInt("u"));
+				umiditaCitta.add(r);
+			}
+
+			conn.close();
+			return umiditaCitta;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+		
+	}
+	
 
 
 }
