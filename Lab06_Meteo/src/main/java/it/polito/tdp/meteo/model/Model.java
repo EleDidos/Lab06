@@ -68,21 +68,22 @@ public class Model {
 		//sommatoria delle umidità in ciascuna città, considerando il rilevamento del giorno giusto
 		//scorrendo parziale con il counter "giorno" che parte da 0
 		
-		for (int giorno=1; giorno<=parziale.size(); giorno++) {
+		for (int giorno=0; giorno<parziale.size(); giorno++) {
 			//dove mi trovo
 			Citta c = parziale.get(giorno);
 			//che umidità ho in quel giorno in quella città?
 			
-			/******** L'ECCEZIONE SI SCATENA QUI***********/
-			for(Rilevamento ri: rilevamenti)
-				if( ri.getLocalita().equals(c.getNome()) && LocalDate.of(2013,mese,giorno).equals(ri.getData()) )
+			for(Rilevamento ri: rilevamenti) {
+				LocalDate ld = LocalDate.of(2013,mese,giorno+1);
+				if( ri.getLocalita().equals(c.getNome()) && ld.equals(ri.getData()) )
 						costo+= ri.getUmidita();
+			}
 			
 		}
 		//poi devo sommare 100*numero di volte in cui cambio città
-		for (int giorno=1; giorno<=parziale.size(); giorno++) {
+		for (int giorno=0; giorno<parziale.size(); giorno++) {
 			//guardo se la città 1 è uguale alla 0, se la 2 è uguale alla 1 e così via...
-			if(!parziale.get(giorno).equals(parziale.get(giorno-1))) {
+			if(giorno<14 && !parziale.get(giorno+1).equals(parziale.get(giorno))) {
 				costo +=100.0;
 			}
 		}
