@@ -1,9 +1,9 @@
 package it.polito.tdp.meteo.model;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import it.polito.tdp.anagrammi.model.Esito;
 import it.polito.tdp.meteo.DAO.MeteoDAO;
 
 public class Model {
@@ -13,16 +13,20 @@ public class Model {
 	private final static int NUMERO_GIORNI_CITTA_MAX = 6;
 	private final static int NUMERO_GIORNI_TOTALI = 15;
 	
-	private  int t = 0; //cnt per torino
-	private  int m = 0; //milano
-	private  int g = 0; //genova
-	private int consecutivi = 0; //gg consecutivi in ultima città
-	private String lastCity ="";
+	private List <Rilevamento> rilevamenti;
+	private Citta [] myCities = new Citta [3];
 	
 	private MeteoDAO dao;
+	
+	int mese=0; //mese passato
 
 	public Model() {
 		dao= new MeteoDAO();
+		rilevamenti = dao.getAllRilevamenti();
+		myCities[0]=new Citta("Genova");
+		myCities[1]=new Citta("Milano");
+		myCities[2]=new Citta("Torino");
+		
 	}
 
 	
@@ -37,105 +41,138 @@ public class Model {
 	
 	
 	/** PROCEDURA PUBBLICA 
-	 * parziale = "" --> ARRAYLIST (perché devo usare dei GET)
+	 * parziale = "" --> ARRAYLIST (perché devo usare dei GET) con gli oggetti CITTA'
 	 * rilevamenti = tutti quelli tra cui cercare prossimo candidato
-	 * livello = 0 --> n° di città già in soluzione
-	 * seq = soluzione finale 
+	 * livello --> n° di città già in soluzione
+	 * best = soluzione finale con solo nomi
 	 * **/
-	public StringBuilder trovaSequenza (int mese){
-		StringBuilder seq = new StringBuilder() ;
-		String [] parziale = new String [15];
-		ricorsiva(parziale,dao.getAllRilevamenti(),0,seq); //LANCIA LA RICORSIONE
-		return seq;
+	public List<Citta> trovaSequenza (int mese){
+		List <Citta> best = new ArrayList <>();
+		List <Citta> parziale = new ArrayList <>();
+		this.mese=mese;
+		ricorsiva(parziale,rilevamenti,0,best); //LANCIA LA RICORSIONE
+		
+		return best;
 	} 
 	
-	private int aggiornaCNT (String localita) {
+	
+	
+	/**
+	 * Calcola il COSTO di una determinata soluzione (totale)
+	 * @param parziale la soluzione (totale) proposta
+	 * @return il valore del costo, che tiene conto delle umidità nei 15 giorni e del costo di cambio città
+	 */
+	private Double calcolaCosto(List<Citta> parziale) {
+		double costo = 0.0;
 		
-			switch(localita) {
-				case ("Torino"): t++;
-					return t;
-				case ("Milano"): m++;
-					return m;
-				case ("Genova"): g++;
-					return g;
-				default:
-					return -1;
+		//sommatoria delle umidità in ciascuna città, considerando il rilevamento del giorno giusto
+		//scorrendo parziale con il counter "giorno" che parte da 0
+		
+		for (int giorno=1; giorno<=parziale.size(); giorno++) {
+			//dove mi trovo
+			Citta c = parziale.get(giorno);
+			//che umidità ho in quel giorno in quella città?
+			
+			/******** L'ECCEZIONE SI SCATENA QUI***********/
+			for(Rilevamento ri: rilevamenti)
+				if( ri.getLocalita().equals(c.getNome()) && LocalDate.of(2013,mese,giorno).equals(ri.getData()) )
+						costo+= ri.getUmidita();
+			
+		}
+		//poi devo sommare 100*numero di volte in cui cambio città
+		for (int giorno=1; giorno<=parziale.size(); giorno++) {
+			//guardo se la città 1 è uguale alla 0, se la 2 è uguale alla 1 e così via...
+			if(!parziale.get(giorno).equals(parziale.get(giorno-1))) {
+				costo +=100.0;
 			}
+		}
+		return costo;
 	}
 	
 	
-	private void ricorsiva(String[] parziale, List<Rilevamento> rilevamenti, int livello, StringBuilder seq) {
+	private void ricorsiva(List <Citta> parziale, List<Rilevamento> rilevamenti, int livello, List <Citta> best) {
 		
 		/** A: condizione di terminazione --> quando arriva qui, la PARZIALE è una SOLUZIONE DI DIM CORRETTA
 		 * ho una sequenza di 15 città  **/
-		if (parziale.length==15) {
-			int i=1;
+		if (parziale.size()==15) {
 			
-			/** C: devo però controllare che questa soluzione sia valida
-			 *     - almeno 1 gg in ogni città
+			/** C: controlliamo se questa parziale mi porta
+			 * 		al miglior costo possibile fino ad ora
 			 *      **/
-			if(t>=1  && m>=1  && g>=1 ) { //GIUSTA e mi fermo
-				for(String citta: parziale)
-					seq.append(String.format("%2-d %-10s", i++, citta));
-				return;
-			}
+				Double costo = calcolaCosto(parziale);
+				//Se è la prima parziale che ho trovato o ha un costo minore delle precedenti
+				if(best.size()==0 || costo<calcolaCosto(best)) {
+					for(Citta ci: parziale)
+						best.add(ci);
+				}
 			
 		} else {
-			//pos = posti rimanenti da visitare
-			for(int pos=0; pos<(15-parziale.length); pos++) {
-				
-				// umidità min da aggiornare a ogni giro
-				float min =1000;
-				
-				for(Rilevamento ri: rilevamenti) { //tra i rimasti
-					
-					// 1. se l'umidità < min
-					if(ri.getUmidita()<min) {
-						
-						// 2.A gg consecutivi in una città<3
-						if(consecutivi<3) {
-							if(ri.getLocalita().compareTo(lastCity)==0) {
-								parziale[pos]=lastCity; // se è uguale 
-								consecutivi++;
-								min=ri.getUmidita();
-								this.aggiornaCNT(lastCity);
-								rilevamenti.remove(pos);
-								/*-->*/ricorsiva(parziale,rilevamenti,livello++,seq);
-							} else {
-								parziale[pos]=ri.getLocalita(); // se non è uguale 
-								consecutivi=1; //va a 1
-								min=ri.getUmidita();
-								lastCity=ri.getLocalita(); //cambia
-								this.aggiornaCNT(lastCity);
-								rilevamenti.remove(pos);
-								/*-->*/ricorsiva(parziale,rilevamenti,livello++,seq);
-							}	
-						} else {
-							//2.B gg consecutivi>=3, check se tot della città<6
-							if(this.aggiornaCNT(lastCity)<6) {
-								//ho aggiornato il cnt in auto solo chimando la f di aggiornamento
-								//perché posso ancora stare qui
-								parziale[pos]=lastCity; 
-								consecutivi++;
-								min=ri.getUmidita();
-								rilevamenti.remove(pos);
-								/*-->*/ricorsiva(parziale,rilevamenti,livello++,seq);
-							} else {
-								//se sono già a 6 gg in questa città devo cambiare per forza
-								consecutivi=0;
-								//vado avanti a cercare un nuovo min
-							}
-						}
-						
-					} // umidità min
-					
-					
-				}//for
-				
-				
-		
+			// sono al giorno gg e provo ad aggiungere ognuna delle località per vedere chi mi produce
+			// sequenza migliore
+			for(Citta prova: myCities) {
+				if(aggiuntaValida(prova,parziale)) {
+					parziale.add(prova);
+					//togli quel rilevamento
+					ricorsiva(parziale,rilevamenti,livello+1,best);
+					parziale.remove(parziale.size()-1); // tolgo ultimo elemento tornando a 1 liv precente 
+														// per provare un'altra combinazione
+				}
+			}
+			
+		}
+	}
+	
+	
+	/**
+	 * Verifica se, data la soluzione {@code parziale} già definita, sia lecito
+	 * aggiungere la città {@code prova}, rispettando i vincoli sui numeri giorni
+	 * minimi e massimi di permanenza.
+	 * 
+	 * @param prova la città che sto cercando di aggiungere
+	 * @param parziale la sequenza di città già composta
+	 * @return {@code true} se {@code prova} è lecita e posso andare avanti di livello, 
+	 * 			{@code false} se invece viola qualche vincolo --> torno indietro di liv,
+	 * 						  cambio ultima città di prova e ci riprovo
+	 *      
+	 */
+	private boolean aggiuntaValida(Citta prova, List<Citta> parziale) {
+
+		// 1. verifica GG MAX	
+		//contiamo quante volte la città 'prova' era già apparsa nell'attuale lista costruita fin qui
+		int conta = 0;
+		for (Citta precedente:parziale) {
+			if (precedente.equals(prova))
+				conta++; 
+		}
+		if (conta >=NUMERO_GIORNI_CITTA_MAX)
+			return false; 
+
+		// 2. verifica dei GG MIN
+		if (parziale.size()==0) //primo giorno posso inserire qualsiasi città
+				return true;
+		if (parziale.size()==1 || parziale.size()==2) {
+			//siamo al secondo o terzo giorno, non posso cambiare
+			//quindi l'aggiunta è valida solo se la città di prova coincide con la sua precedente
+			return parziale.get(parziale.size()-1).equals(prova); 
+		}
+		//nel caso generale, se ho già passato i controlli sopra e quindi sono lì da meno di 6 gg
+		//non c'è nulla che mi vieta di rimanere nella stessa città
+		//quindi se è uguale alla precedente è OK
+		if (parziale.get(parziale.size()-1).equals(prova))
+			return true; 
+		// se cambio città mi devo assicurare che nei tre giorni precedenti sia rimasto fermo 
+		if (parziale.get(parziale.size()-1).equals(parziale.get(parziale.size()-2)) 
+		&& parziale.get(parziale.size()-2).equals(parziale.get(parziale.size()-3)))
+			return true;
+
+		return false;
+
+	}
+
+
+			
 		
 
 	
 
-			}
+} //model

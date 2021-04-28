@@ -24,8 +24,8 @@ public class MeteoDAO {
 			ResultSet rs = st.executeQuery();
 
 			while (rs.next()) {
-
-				Rilevamento r = new Rilevamento(rs.getString("Localita"), rs.getDate("Data"), rs.getInt("Umidita"));
+																			//passo da DATA SQL a LocalDate Java
+				Rilevamento r = new Rilevamento(rs.getString("Localita"), (rs.getDate("Data")).toLocalDate(), rs.getInt("Umidita"));
 				rilevamenti.add(r);
 			}
 
@@ -40,10 +40,10 @@ public class MeteoDAO {
 	}
 
 	
-	public List<Rilevamento> getAllRilevamentiLocalitaMese(int mese, String localita) {
+	/*public List<Rilevamento> getAllRilevamentiLocalitaMese(int mese, String localita) {
 
 		return null;
-	}
+	}*/
 	
 	
 	public List<Rilevamento> getUmiditaMediaMese(int mese){
