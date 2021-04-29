@@ -72,9 +72,9 @@ public class Model {
 			//dove mi trovo
 			Citta c = parziale.get(giorno);
 			//che umidità ho in quel giorno in quella città?
+			LocalDate ld = LocalDate.of(2013,mese,giorno+1);
 			
 			for(Rilevamento ri: rilevamenti) {
-				LocalDate ld = LocalDate.of(2013,mese,giorno+1);
 				if( ri.getLocalita().equals(c.getNome()) && ld.equals(ri.getData()) )
 						costo+= ri.getUmidita();
 			}
@@ -103,6 +103,8 @@ public class Model {
 				Double costo = calcolaCosto(parziale);
 				//Se è la prima parziale che ho trovato o ha un costo minore delle precedenti
 				if(best.size()==0 || costo<calcolaCosto(best)) {
+					//togli precedente soluzione ottima e metti quella nuova
+					best.clear();
 					for(Citta ci: parziale)
 						best.add(ci);
 				}
